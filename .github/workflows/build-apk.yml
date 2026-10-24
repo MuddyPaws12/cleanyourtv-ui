@@ -29,13 +29,11 @@ jobs:
           java-version: '17'
 
       # ── 3. Android SDK (build-tools 34.0.0 + platform android-34) ────────────
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # The runner already has the Android SDK; just install the components we need.
       - name: Install required Android SDK components
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "build-tools;34.0.0" "platforms;android-34"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;34.0.0" "platforms;android-34"
 
       # ── 4. Config ─────────────────────────────────────────────────────────────
       # Priority: manual dispatch input > repository secret TMDB_KEY > empty (works without a key)
@@ -49,8 +47,7 @@ jobs:
           if [ -n "$TMDB_KEY" ]; then
             sed -i "s|^tmdb_key=.*|tmdb_key=$TMDB_KEY|" config.properties
           fi
-          # You can hard-code or override other settings here, e.g.:
-          #   sed -i "s|^tmdb_region=.*|tmdb_region=IN|" config.properties
+          sed -i "s|^tmdb_region=.*|tmdb_region=IN|" config.properties
           echo "config.properties written:"
           grep -v 'tmdb_key' config.properties   # print without exposing the key
 
