@@ -50,7 +50,7 @@ jobs:
             sed -i "s|^tmdb_key=.*|tmdb_key=$TMDB_KEY|" config.properties
           fi
           # You can hard-code or override other settings here, e.g.:
-          #   sed -i "s|^tmdb_region=.*|tmdb_region=US|" config.properties
+          #   sed -i "s|^tmdb_region=.*|tmdb_region=IN|" config.properties
           echo "config.properties written:"
           grep -v 'tmdb_key' config.properties   # print without exposing the key
 
