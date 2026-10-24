@@ -1,0 +1,71 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'launcher-ui/**'
+  workflow_dispatch:          # lets you trigger a build from the Actions tab at any time
+    inputs:
+      tmdb_key:
+        description: 'TMDB API key (leave blank to use the repository secret)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. JDK 17 ────────────────────────────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ── 3. Android SDK (build-tools 34.0.0 + platform android-34) ────────────
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install required Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "build-tools;34.0.0" "platforms;android-34"
+
+      # ── 4. Config ─────────────────────────────────────────────────────────────
+      # Priority: manual dispatch input > repository secret TMDB_KEY > empty (works without a key)
+      - name: Write config.properties
+        working-directory: launcher-ui
+        env:
+          TMDB_KEY: ${{ inputs.tmdb_key || secrets.TMDB_KEY }}
+        run: |
+          cp config.example.properties config.properties
+          # Inject the TMDB key when one is available
+          if [ -n "$TMDB_KEY" ]; then
+            sed -i "s|^tmdb_key=.*|tmdb_key=$TMDB_KEY|" config.properties
+          fi
+          # You can hard-code or override other settings here, e.g.:
+          #   sed -i "s|^tmdb_region=.*|tmdb_region=US|" config.properties
+          echo "config.properties written:"
+          grep -v 'tmdb_key' config.properties   # print without exposing the key
+
+      # ── 5. Build ─────────────────────────────────────────────────────────────
+      - name: Build APK
+        working-directory: launcher-ui
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+        run: bash build.sh
+
+      # ── 6. Upload artifact ────────────────────────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CleanYourTV-UI-${{ github.sha }}
+          path: launcher-ui/CleanYourTV-UI.apk
+          if-no-files-found: error
+          retention-days: 30
